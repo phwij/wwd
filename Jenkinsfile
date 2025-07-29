@@ -4,7 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = "hwijin12/apache"
         IMAGE_TAG = "latest"
-        BASE_DIR = "${env.WORKSPACE}/.podman"  // Jenkins 작업 공간 안에 podman 디렉토리 생성
+        BASE_DIR = "${env.WORKSPACE}/.podman"  // Jenkins 작업 디렉토리 내 podman 공간
     }
 
     stages {
@@ -21,21 +21,17 @@ pipeline {
                 sh '''
                     mkdir -p $BASE_DIR/tmp $BASE_DIR/run $BASE_DIR/storage $BASE_DIR/config
 
-                    cat <<EOF > $BASE_DIR/config/registries.conf
-                    unqualified-search-registries = ["docker.io"]
-[storage]
-driver = "vfs"
-runroot = "$BASE_DIR/run"
-graphroot = "$BASE_DIR/storage"
-
-[engine]
-tmpdir = "$BASE_DIR/tmp"
-runroot = "$BASE_DIR/run"
-
-[[registry]]
-prefix = "docker.io"
-location = "registry-1.docker.io"
-EOF
+                    echo 'unqualified-search-registries = ["docker.io"]' > $BASE_DIR/config/registries.conf
+                    echo '[storage]' >> $BASE_DIR/config/registries.conf
+                    echo 'driver = "vfs"' >> $BASE_DIR/config/registries.conf
+                    echo "runroot = \\"$BASE_DIR/run\\"" >> $BASE_DIR/config/registries.conf
+                    echo "graphroot = \\"$BASE_DIR/storage\\"" >> $BASE_DIR/config/registries.conf
+                    echo '[engine]' >> $BASE_DIR/config/registries.conf
+                    echo "tmpdir = \\"$BASE_DIR/tmp\\"" >> $BASE_DIR/config/registries.conf
+                    echo "runroot = \\"$BASE_DIR/run\\"" >> $BASE_DIR/config/registries.conf
+                    echo '[[registry]]' >> $BASE_DIR/config/registries.conf
+                    echo 'prefix = "docker.io"' >> $BASE_DIR/config/registries.conf
+                    echo 'location = "registry-1.docker.io"' >> $BASE_DIR/config/registries.conf
 
                     export XDG_RUNTIME_DIR=$BASE_DIR/tmp
                     export TMPDIR=$BASE_DIR/tmp
