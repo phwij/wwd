@@ -39,6 +39,9 @@ pipeline {
           echo 'prefix = "docker.io"' >> $CONFDIR/registries.conf
           echo 'location = "registry-1.docker.io"' >> $CONFDIR/registries.conf
 
+          rm -rf "$GRAPHROOT"/* || true
+          rm -rf "$RUNROOT"/* || true
+
           TMPDIR="$TMPDIR" \
           XDG_RUNTIME_DIR="$TMPDIR" \
           PODMAN_TMPDIR="$TMPDIR" \
