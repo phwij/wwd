@@ -22,6 +22,7 @@ pipeline {
                     mkdir -p $BASE_DIR/tmp $BASE_DIR/run $BASE_DIR/storage $BASE_DIR/config
 
                     cat <<EOF > $BASE_DIR/config/registries.conf
+                    unqualified-search-registries = ["docker.io"]
 [storage]
 driver = "vfs"
 runroot = "$BASE_DIR/run"
