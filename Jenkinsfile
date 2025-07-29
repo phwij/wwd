@@ -33,8 +33,11 @@ pipeline {
           echo "tmpdir = \\"$TMPDIR\\"" >> $CONFDIR/containers.conf
           echo "runroot = \\"$RUNROOT\\"" >> $CONFDIR/containers.conf
 
-          echo "[[registry]]" > $CONFDIR/registries.conf
-          echo "prefix = \\"docker.io\\"" >> $CONFDIR/registries.conf
+          echo 'unqualified-search-registries = ["docker.io"]' > $CONFDIR/registries.conf
+          echo '' >> $CONFDIR/registries.conf
+          echo '[[registry]]' >> $CONFDIR/registries.conf
+          echo 'prefix = "docker.io"' >> $CONFDIR/registries.conf
+          echo 'location = "registry-1.docker.io"' >> $CONFDIR/registries.conf
 
           TMPDIR="$TMPDIR" \
           XDG_RUNTIME_DIR="$TMPDIR" \
