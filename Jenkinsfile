@@ -1,6 +1,5 @@
 pipeline {
   agent any
-
   environment {
     IMAGE_NAME = "hwijin12/apache:latest"
     TMPDIR = "/var/jenkins_home/tmp"
@@ -8,18 +7,11 @@ pipeline {
     GRAPHROOT = "/var/jenkins_home/.local/share/containers/storage"
     CONFDIR = "/var/jenkins_home/.config/containers"
   }
-
   stages {
     stage('Checkout Source') {
       steps {
         echo "[INFO] GitHub 코드 체크아웃"
-        checkout([$class: 'GitSCM',
-                  branches: [[name: '*/main']],
-                  userRemoteConfigs: [[
-                    url: 'https://github.com/phwij/wwd.git',
-                    credentialsId: 'phwij'
-                  ]]
-        ])
+        checkout scm
       }
     }
 
@@ -29,22 +21,17 @@ pipeline {
         sh '''
           mkdir -p "$TMPDIR" "$RUNROOT" "$GRAPHROOT" "$CONFDIR"
 
-          cat <<EOF > $CONFDIR/containers.conf
-[engine]
-tmpdir = "$TMPDIR"
-runroot = "$RUNROOT"
-EOF
+          echo "[storage]" > $CONFDIR/storage.conf
+          echo "driver = \\"vfs\\"" >> $CONFDIR/storage.conf
+          echo "runroot = \\"$RUNROOT\\"" >> $CONFDIR/storage.conf
+          echo "graphroot = \\"$GRAPHROOT\\"" >> $CONFDIR/storage.conf
 
-          cat <<EOF > $CONFDIR/storage.conf
-[storage]
-driver = "vfs"
-runroot = "$RUNROOT"
-graphroot = "$GRAPHROOT"
-EOF
+          echo "[engine]" > $CONFDIR/containers.conf
+          echo "tmpdir = \\"$TMPDIR\\"" >> $CONFDIR/containers.conf
+          echo "runroot = \\"$RUNROOT\\"" >> $CONFDIR/containers.conf
 
-          cat <<EOF > $CONFDIR/registries.conf
-unqualified-search-registries = ["docker.io"]
-EOF
+          echo "[[registry]]" > $CONFDIR/registries.conf
+          echo "prefix = \\"docker.io\\"" >> $CONFDIR/registries.conf
 
           TMPDIR="$TMPDIR" \
           XDG_RUNTIME_DIR="$TMPDIR" \
@@ -54,10 +41,21 @@ EOF
       }
     }
 
-    stage('Deploy to Kubernetes') {
+    stage('Push Image (옵션)') {
+      when {
+        expression { return false }
+      }
       steps {
-        echo "[INFO] Kubernetes에 배포"
-        sh 'kubectl apply -f k8s/apache-deployment.yaml'
+        echo "[INFO] 이미지 푸시는 현재 생략 중"
+      }
+    }
+
+    stage('Deploy to Kubernetes') {
+      when {
+        expression { return false }
+      }
+      steps {
+        echo "[INFO] 배포 단계 생략됨"
       }
     }
   }
