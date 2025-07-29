@@ -31,7 +31,6 @@ pipeline {
                     export TMPDIR=/custom-podman/tmp
                     export PODMAN_TMPDIR=/custom-podman/tmp
                     export XDG_RUNTIME_DIR=/custom-podman/tmp
-                    rm -rf /var/tmp && ln -s /custom-podman/tmp /var/tmp
 
 
                     # OCI config 등 fallback 경로용
