@@ -3,8 +3,10 @@ pipeline {
 
   environment {
     IMAGE_NAME = "hwijin12/apache:latest"
-    NAMESPACE = "default" // apache가 배포된 네임스페이스
-    TMPDIR = "/var/jenkins_home/tmp" // Podman temp workaround
+    NAMESPACE = "default"  // Apache가 배포된 네임스페이스
+    TMPDIR = "/var/jenkins_home/tmp"
+    XDG_RUNTIME_DIR = "/var/jenkins_home/tmp"
+    PODMAN_TMPDIR = "/var/jenkins_home/tmp"
   }
 
   stages {
@@ -21,25 +23,32 @@ pipeline {
         sh '''
           mkdir -p $TMPDIR
           mkdir -p ~/.config/containers
+          mkdir -p ~/.local/share/containers/run
+          mkdir -p ~/.local/share/containers/storage
 
-          echo "[storage]" > ~/.config/containers/storage.conf
-          echo "driver = \\"vfs\\"" >> ~/.config/containers/storage.conf
-          echo "runroot = \\"/var/jenkins_home/.local/share/containers/run\\"" >> ~/.config/containers/storage.conf
-          echo "graphroot = \\"/var/jenkins_home/.local/share/containers/storage\\"" >> ~/.config/containers/storage.conf
+          # Podman storage 설정 (VFS 모드)
+          cat <<EOF > ~/.config/containers/storage.conf
+[storage]
+driver = "vfs"
+runroot = "/var/jenkins_home/.local/share/containers/run"
+graphroot = "/var/jenkins_home/.local/share/containers/storage"
+EOF
 
-          echo "unqualified-search-registries = [\\"docker.io\\"]" > ~/.config/containers/registries.conf
+          # Registry 설정
+          echo 'unqualified-search-registries = ["docker.io"]' > ~/.config/containers/registries.conf
 
+          # Podman 빌드 (임시 디렉토리 강제 지정)
           TMPDIR=$TMPDIR \
-          XDG_RUNTIME_DIR=$TMPDIR \
-          PODMAN_TMPDIR=$TMPDIR \
-          podman --storage-driver=vfs --tmpdir=$TMPDIR build -t ${IMAGE_NAME} -f Dockerfile .
+          XDG_RUNTIME_DIR=$XDG_RUNTIME_DIR \
+          PODMAN_TMPDIR=$PODMAN_TMPDIR \
+          podman --storage-driver=vfs build -t ${IMAGE_NAME} -f Dockerfile .
         '''
       }
     }
 
     stage('Push Image (옵션)') {
       when {
-        expression { return false } // true로 바꾸면 푸시 활성화
+        expression { return false }  // true로 바꾸면 이미지 푸시 활성화
       }
       steps {
         echo "[INFO] 이미지 푸시"
@@ -52,7 +61,7 @@ pipeline {
 
     stage('Deploy to Kubernetes') {
       steps {
-        echo "[INFO] Kubernetes 배포 롤링 재시작"
+        echo "[INFO] Kubernetes에 롤링 재배포 시작"
         sh '''
           kubectl rollout restart deployment apache -n ${NAMESPACE}
         '''
@@ -62,10 +71,10 @@ pipeline {
 
   post {
     success {
-      echo '[✅ SUCCESS] 파이프라인 완료!'
+      echo '[✅ SUCCESS] 파이프라인 성공적으로 완료됨!'
     }
     failure {
-      echo '[❌ FAILURE] 오류 발생. Console Output 확인 바랍니다.'
+      echo '[❌ FAILURE] 파이프라인 실패 - Console Output 확인 바람.'
     }
   }
 }
