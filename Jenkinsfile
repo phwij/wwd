@@ -32,6 +32,7 @@ pipeline {
 
           echo "[[registry]]" > $CONFDIR/registries.conf
           echo "prefix = \\"docker.io\\"" >> $CONFDIR/registries.conf
+          echo "location = \\"registry-1.docker.io\\"" >> $CONFDIR/registries.conf
 
           TMPDIR="$TMPDIR" \
           XDG_RUNTIME_DIR="$TMPDIR" \
