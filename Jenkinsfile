@@ -4,6 +4,7 @@ pipeline {
   environment {
     IMAGE_NAME = "hwijin12/apache:latest"
     NAMESPACE = "default" // apache가 배포된 네임스페이스
+    TMPDIR = "/var/jenkins_home/tmp" // Podman temp workaround
   }
 
   stages {
@@ -18,23 +19,17 @@ pipeline {
       steps {
         echo "[INFO] Podman으로 이미지 빌드 시작"
         sh '''
+          mkdir -p $TMPDIR
           mkdir -p ~/.config/containers
 
-          # 정확한 TOML 형식의 storage.conf 작성 (runroot, graphroot 직접 선언)
-          cat <<EOF > ~/.config/containers/storage.conf
-[storage]
-driver = "vfs"
-runroot = "/var/jenkins_home/.local/share/containers/run"
-graphroot = "/var/jenkins_home/.local/share/containers/storage"
-EOF
+          echo "[storage]" > ~/.config/containers/storage.conf
+          echo "driver = \\"vfs\\"" >> ~/.config/containers/storage.conf
+          echo "runroot = \\"/var/jenkins_home/.local/share/containers/run\\"" >> ~/.config/containers/storage.conf
+          echo "graphroot = \\"/var/jenkins_home/.local/share/containers/storage\\"" >> ~/.config/containers/storage.conf
 
-          # registry 설정 (short name 사용 가능)
-          cat <<EOF > ~/.config/containers/registries.conf
-unqualified-search-registries = ["docker.io"]
-EOF
+          echo "unqualified-search-registries = [\\"docker.io\\"]" > ~/.config/containers/registries.conf
 
-          # 이미지 빌드 실행
-          podman --storage-driver=vfs build -t ${IMAGE_NAME} -f Dockerfile .
+          TMPDIR=$TMPDIR podman --storage-driver=vfs build -t ${IMAGE_NAME} -f Dockerfile .
         '''
       }
     }
@@ -54,7 +49,7 @@ EOF
 
     stage('Deploy to Kubernetes') {
       steps {
-        echo "[INFO] Deployment 롤링 재시작"
+        echo "[INFO] Kubernetes 배포 롤링 재시작"
         sh '''
           kubectl rollout restart deployment apache -n ${NAMESPACE}
         '''
