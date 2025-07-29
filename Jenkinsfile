@@ -32,7 +32,7 @@ pipeline {
           TMPDIR=$TMPDIR \
           XDG_RUNTIME_DIR=$TMPDIR \
           PODMAN_TMPDIR=$TMPDIR \
-          podman --storage-driver=vfs build -t ${IMAGE_NAME} -f Dockerfile .
+          podman --storage-driver=vfs --tmpdir=$TMPDIR build -t ${IMAGE_NAME} -f Dockerfile .
         '''
       }
     }
