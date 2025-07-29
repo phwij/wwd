@@ -13,12 +13,12 @@ pipeline {
                 checkout scm
             }
         }
-
         stage('Build Docker Image') {
             steps {
                 echo "[INFO] Podman으로 이미지 빌드 시작"
                 sh '''
                     mkdir -p /var/jenkins_home/tmp /var/jenkins_home/.local/share/containers/run /var/jenkins_home/.local/share/containers/storage /var/jenkins_home/.config/containers
+
                     cat <<EOF > /var/jenkins_home/.config/containers/registries.conf
 [storage]
 driver = "vfs"
@@ -34,15 +34,18 @@ prefix = "docker.io"
 location = "registry-1.docker.io"
 EOF
 
-                    XDG_RUNTIME_DIR=/var/jenkins_home/tmp TMPDIR=/var/jenkins_home/tmp \
+            # ✅ 핵심: PODMAN_TMPDIR까지 지정
+                    XDG_RUNTIME_DIR=/var/jenkins_home/tmp \
+                    TMPDIR=/var/jenkins_home/tmp \
+                    PODMAN_TMPDIR=/var/jenkins_home/tmp \
                     podman --storage-driver=vfs \
                            --root=/var/jenkins_home/.local/share/containers/storage \
                            --runroot=/var/jenkins_home/.local/share/containers/run \
                            --tmpdir=/var/jenkins_home/tmp \
                            build -t $IMAGE_NAME:$IMAGE_TAG -f Dockerfile .
-                '''
-            }
-        }
+        '''
+    }
+}
 
         stage('Push Image') {
             steps {
