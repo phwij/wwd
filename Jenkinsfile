@@ -64,5 +64,8 @@ EOF
 
   post {
     failure {
-      echo "
+      echo "[❌ FAILURE] 오류 발생. Console Output 확인 바랍니다."
+    }
+  }
+}
 
