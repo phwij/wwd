@@ -28,9 +28,11 @@ pipeline {
                     mkdir -p $BASE_DIR/containers/cache
 
                     # Podman이 /var/tmp를 참조하지 않도록 환경 변수로 override
-                    export TMPDIR=$BASE_DIR/tmp
-                    export XDG_RUNTIME_DIR=$BASE_DIR/tmp
-                    export PODMAN_TMPDIR=$BASE_DIR/tmp
+                    export TMPDIR=/custom-podman/tmp
+                    export PODMAN_TMPDIR=/custom-podman/tmp
+                    export XDG_RUNTIME_DIR=/custom-podman/tmp
+                    rm -rf /var/tmp && ln -s /custom-podman/tmp /var/tmp
+
 
                     # OCI config 등 fallback 경로용
                     export _OCI_TMPDIR=$BASE_DIR/tmp
