@@ -20,33 +20,31 @@ pipeline {
         sh '''
           mkdir -p ~/.config/containers
 
-      # storage.conf 설정 (runroot, graphroot 지정)
+          # 정확한 TOML 형식의 storage.conf 작성 (runroot, graphroot 직접 선언)
           cat <<EOF > ~/.config/containers/storage.conf
 [storage]
 driver = "vfs"
-
-[storage.options]
 runroot = "/var/jenkins_home/.local/share/containers/run"
 graphroot = "/var/jenkins_home/.local/share/containers/storage"
 EOF
 
-      # registries.conf 설정 (TOML 형식)
+          # registry 설정 (short name 사용 가능)
           cat <<EOF > ~/.config/containers/registries.conf
 unqualified-search-registries = ["docker.io"]
 EOF
 
-      # 이미지 빌드
-         podman build -t ${IMAGE_NAME} -f Dockerfile .
-       '''
-     }
-   }
+          # 이미지 빌드 실행
+          podman --storage-driver=vfs build -t ${IMAGE_NAME} -f Dockerfile .
+        '''
+      }
+    }
 
     stage('Push Image (옵션)') {
       when {
-        expression { return false } // 필요 시 true로 바꾸고 레지스트리 계정 정보 입력
+        expression { return false } // true로 바꾸면 푸시 활성화
       }
       steps {
-        echo "[INFO] 이미지 푸시 (선택)"
+        echo "[INFO] 이미지 푸시"
         sh '''
           podman login quay.io -u <your-username> -p <your-password>
           podman push ${IMAGE_NAME} quay.io/<your-username>/apache:latest
