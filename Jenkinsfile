@@ -3,7 +3,7 @@ pipeline {
 
   environment {
     IMAGE_NAME = "hwijin12/apache:latest"
-    TMPDIR = "/var/tmp"
+    TMPDIR = "/var/jenkins_home/tmp"
     RUNROOT = "/var/jenkins_home/.local/share/containers/run"
     GRAPHROOT = "/var/jenkins_home/.local/share/containers/storage"
     CONFDIR = "/var/jenkins_home/.config/containers"
@@ -54,19 +54,6 @@ EOF
       }
     }
 
-    stage('Push Image (옵션)') {
-      when {
-        expression { return false } // 필요시 true로 수정
-      }
-      steps {
-        echo "[INFO] 이미지 푸시 (옵션)"
-        sh '''
-          podman login -u USERNAME -p PASSWORD registry.example.com
-          podman push "$IMAGE_NAME" registry.example.com/hwijin12/apache:latest
-        '''
-      }
-    }
-
     stage('Deploy to Kubernetes') {
       steps {
         echo "[INFO] Kubernetes에 배포"
@@ -77,8 +64,5 @@ EOF
 
   post {
     failure {
-      echo "[❌ FAILURE] 오류 발생. Console Output 확인 바랍니다."
-    }
-  }
-}
+      echo "
 
