@@ -4,6 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = "hwijin12/apache"
         IMAGE_TAG = "latest"
+        BASE_DIR = "${env.WORKSPACE}/.podman"  // Jenkins 작업 공간 안에 podman 디렉토리 생성
     }
 
     stages {
@@ -13,39 +14,41 @@ pipeline {
                 checkout scm
             }
         }
+
         stage('Build Docker Image') {
             steps {
                 echo "[INFO] Podman으로 이미지 빌드 시작"
                 sh '''
-                    mkdir -p /var/jenkins_home/tmp /var/jenkins_home/.local/share/containers/run /var/jenkins_home/.local/share/containers/storage /var/jenkins_home/.config/containers
+                    mkdir -p $BASE_DIR/tmp $BASE_DIR/run $BASE_DIR/storage $BASE_DIR/config
 
-                    cat <<EOF > /var/jenkins_home/.config/containers/registries.conf
+                    cat <<EOF > $BASE_DIR/config/registries.conf
 [storage]
 driver = "vfs"
-runroot = "/var/jenkins_home/.local/share/containers/run"
-graphroot = "/var/jenkins_home/.local/share/containers/storage"
+runroot = "$BASE_DIR/run"
+graphroot = "$BASE_DIR/storage"
 
 [engine]
-tmpdir = "/var/jenkins_home/tmp"
-runroot = "/var/jenkins_home/.local/share/containers/run"
+tmpdir = "$BASE_DIR/tmp"
+runroot = "$BASE_DIR/run"
 
 [[registry]]
 prefix = "docker.io"
 location = "registry-1.docker.io"
 EOF
 
-            # ✅ 핵심: PODMAN_TMPDIR까지 지정
-                    XDG_RUNTIME_DIR=/var/jenkins_home/tmp \
-                    TMPDIR=/var/jenkins_home/tmp \
-                    PODMAN_TMPDIR=/var/jenkins_home/tmp \
+                    export XDG_RUNTIME_DIR=$BASE_DIR/tmp
+                    export TMPDIR=$BASE_DIR/tmp
+                    export PODMAN_TMPDIR=$BASE_DIR/tmp
+
                     podman --storage-driver=vfs \
-                           --root=/var/jenkins_home/.local/share/containers/storage \
-                           --runroot=/var/jenkins_home/.local/share/containers/run \
-                           --tmpdir=/var/jenkins_home/tmp \
+                           --root=$BASE_DIR/storage \
+                           --runroot=$BASE_DIR/run \
+                           --tmpdir=$BASE_DIR/tmp \
+                           --config=$BASE_DIR/config \
                            build -t $IMAGE_NAME:$IMAGE_TAG -f Dockerfile .
-        '''
-    }
-}
+                '''
+            }
+        }
 
         stage('Push Image') {
             steps {
