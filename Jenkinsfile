@@ -3,18 +3,23 @@ pipeline {
 
   environment {
     IMAGE_NAME = "hwijin12/apache:latest"
-    NAMESPACE = "default"
-    TMPDIR = "/var/jenkins_home/tmp"
+    TMPDIR = "/var/tmp"
     RUNROOT = "/var/jenkins_home/.local/share/containers/run"
     GRAPHROOT = "/var/jenkins_home/.local/share/containers/storage"
     CONFDIR = "/var/jenkins_home/.config/containers"
   }
 
   stages {
-    stage('Checkout') {
+    stage('Checkout Source') {
       steps {
         echo "[INFO] GitHub 코드 체크아웃"
-        checkout scm
+        checkout([$class: 'GitSCM',
+                  branches: [[name: '*/main']],
+                  userRemoteConfigs: [[
+                    url: 'https://github.com/phwij/wwd.git',
+                    credentialsId: 'phwij'
+                  ]]
+        ])
       }
     }
 
@@ -24,23 +29,22 @@ pipeline {
         sh '''
           mkdir -p "$TMPDIR" "$RUNROOT" "$GRAPHROOT" "$CONFDIR"
 
-          echo "[storage]" > $CONFDIR/storage.conf
-          echo "driver = \\"vfs\\"" >> $CONFDIR/storage.conf
-          echo "runroot = \\"$RUNROOT\\"" >> $CONFDIR/storage.conf
-          echo "graphroot = \\"$GRAPHROOT\\"" >> $CONFDIR/storage.conf
+          cat <<EOF > $CONFDIR/containers.conf
+[engine]
+tmpdir = "$TMPDIR"
+runroot = "$RUNROOT"
+EOF
 
-          echo "[engine]" > $CONFDIR/containers.conf
-          echo "tmpdir = \\"$TMPDIR\\"" >> $CONFDIR/containers.conf
-          echo "runroot = \\"$RUNROOT\\"" >> $CONFDIR/containers.conf
+          cat <<EOF > $CONFDIR/storage.conf
+[storage]
+driver = "vfs"
+runroot = "$RUNROOT"
+graphroot = "$GRAPHROOT"
+EOF
 
-          echo 'unqualified-search-registries = ["docker.io"]' > $CONFDIR/registries.conf
-          echo '' >> $CONFDIR/registries.conf
-          echo '[[registry]]' >> $CONFDIR/registries.conf
-          echo 'prefix = "docker.io"' >> $CONFDIR/registries.conf
-          echo 'location = "registry-1.docker.io"' >> $CONFDIR/registries.conf
-
-          rm -rf "$GRAPHROOT"/* || true
-          rm -rf "$RUNROOT"/* || true
+          cat <<EOF > $CONFDIR/registries.conf
+unqualified-search-registries = ["docker.io"]
+EOF
 
           TMPDIR="$TMPDIR" \
           XDG_RUNTIME_DIR="$TMPDIR" \
@@ -52,33 +56,28 @@ pipeline {
 
     stage('Push Image (옵션)') {
       when {
-        expression { return false }
+        expression { return false } // 필요시 true로 수정
       }
       steps {
-        echo "[INFO] 이미지 푸시"
+        echo "[INFO] 이미지 푸시 (옵션)"
         sh '''
-          podman login quay.io -u <your-username> -p <your-password>
-          podman push "$IMAGE_NAME" quay.io/<your-username>/apache:latest
+          podman login -u USERNAME -p PASSWORD registry.example.com
+          podman push "$IMAGE_NAME" registry.example.com/hwijin12/apache:latest
         '''
       }
     }
 
     stage('Deploy to Kubernetes') {
       steps {
-        echo "[INFO] Kubernetes 배포 롤링 재시작"
-        sh '''
-          kubectl rollout restart deployment apache -n "$NAMESPACE"
-        '''
+        echo "[INFO] Kubernetes에 배포"
+        sh 'kubectl apply -f k8s/apache-deployment.yaml'
       }
     }
   }
 
   post {
-    success {
-      echo '[✅ SUCCESS] 파이프라인 완료!'
-    }
     failure {
-      echo '[❌ FAILURE] 오류 발생. Console Output 확인 바랍니다.'
+      echo "[❌ FAILURE] 오류 발생. Console Output 확인 바랍니다."
     }
   }
 }
