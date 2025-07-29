@@ -2,23 +2,19 @@ pipeline {
   agent any
 
   environment {
-    TMPDIR = '/var/tmp'
-    XDG_RUNTIME_DIR = '/var/tmp'
-    PODMAN_TMPDIR = '/var/tmp'
+    IMAGE_NAME = 'hwijin12/apache:latest'
+    CONTAINER_TMPDIR = '/var/jenkins_home/tmp'
+    CONTAINER_RUNDIR = '/var/jenkins_home/.local/share/containers/run'
+    CONTAINER_GRAPHROOT = '/var/jenkins_home/.local/share/containers/storage'
+    CONTAINER_CONF = '/var/jenkins_home/.config/containers'
+    CONTAINER_RUNTIME_DIR = '/var/jenkins_home/runtime-dir'
   }
 
   stages {
     stage('Checkout Source') {
       steps {
         echo "[INFO] GitHub 코드 체크아웃"
-        checkout([
-          $class: 'GitSCM',
-          branches: [[name: '*/main']],
-          userRemoteConfigs: [[
-            url: 'https://github.com/phwij/wwd.git',
-            credentialsId: 'phwij'
-          ]]
-        ])
+        checkout scm
       }
     }
 
@@ -26,8 +22,11 @@ pipeline {
       steps {
         echo "[INFO] Podman으로 이미지 빌드 시작"
         sh '''
-          mkdir -p /var/tmp /var/jenkins_home/.config/containers
-          cat <<EOF > /var/jenkins_home/.config/containers/registries.conf
+          mkdir -p $CONTAINER_RUNTIME_DIR
+          chown -R $(id -u):$(id -g) $CONTAINER_RUNTIME_DIR
+
+          mkdir -p $CONTAINER_CONF
+          cat <<EOF > $CONTAINER_CONF/registries.conf
 [registries.search]
 registries = ['docker.io']
 
@@ -36,28 +35,31 @@ prefix = "docker.io"
 location = "registry-1.docker.io"
 EOF
 
+          mkdir -p $CONTAINER_TMPDIR $CONTAINER_RUNDIR $CONTAINER_GRAPHROOT
+
+          XDG_RUNTIME_DIR=$CONTAINER_RUNTIME_DIR \
+          TMPDIR=$CONTAINER_TMPDIR \
           podman --storage-driver=vfs \
-            --root=/var/jenkins_home/.local/share/containers/storage \
-            --runroot=/var/jenkins_home/.local/share/containers/run \
-            --tmpdir=/var/tmp \
-            build -t hwijin12/apache:latest -f Dockerfile .
+            --root=$CONTAINER_GRAPHROOT \
+            --runroot=$CONTAINER_RUNDIR \
+            --tmpdir=$CONTAINER_TMPDIR \
+            build -t $IMAGE_NAME -f Dockerfile .
         '''
       }
     }
 
     stage('Push Image (옵션)') {
       when {
-        expression { return false }  // 필요 시 true로 변경
+        expression { return false } // 필요시 true로 변경 후 push 추가
       }
       steps {
-        echo "[INFO] 이미지 푸시 단계 - 생략"
+        echo "[INFO] (옵션) 이미지 푸시 단계"
       }
     }
 
     stage('Deploy to Kubernetes') {
       steps {
-        echo "[INFO] Kubernetes에 배포 시작"
-        sh 'kubectl apply -f k8s/apache.yaml'
+        echo "[INFO] (옵션) Kubernetes 배포 단계 - 필요한 경우 적용"
       }
     }
   }
