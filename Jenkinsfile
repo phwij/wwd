@@ -21,11 +21,10 @@ pipeline {
       steps {
         echo "[INFO] Podman으로 이미지 빌드 시작"
         sh '''
-          # 캐시 초기화 (중요)
-          rm -rf $GRAPHROOT
-          rm -rf $RUNROOT
+          echo "[INIT] Podman 캐시 초기화"
+          rm -rf "$RUNROOT" "$GRAPHROOT"
 
-          mkdir -p $TMPDIR
+          mkdir -p "$TMPDIR"
           mkdir -p ~/.config/containers
 
           echo "[storage]" > ~/.config/containers/storage.conf
@@ -35,15 +34,16 @@ pipeline {
 
           echo "unqualified-search-registries = [\\"docker.io\\"]" > ~/.config/containers/registries.conf
 
-          TMPDIR=$TMPDIR \
-          XDG_RUNTIME_DIR=$TMPDIR \
-          PODMAN_TMPDIR=$TMPDIR \
+          echo "[BUILD] podman build 시작"
+          TMPDIR="$TMPDIR" \
+          XDG_RUNTIME_DIR="$TMPDIR" \
+          PODMAN_TMPDIR="$TMPDIR" \
           podman \
-            --tmpdir=$TMPDIR \
-            --root=$GRAPHROOT \
-            --runroot=$RUNROOT \
+            --tmpdir="$TMPDIR" \
+            --root="$GRAPHROOT" \
+            --runroot="$RUNROOT" \
             --storage-driver=vfs \
-            build -t ${IMAGE_NAME} -f Dockerfile .
+            build -t "$IMAGE_NAME" -f Dockerfile .
         '''
       }
     }
@@ -56,7 +56,7 @@ pipeline {
         echo "[INFO] 이미지 푸시"
         sh '''
           podman login quay.io -u <your-username> -p <your-password>
-          podman push ${IMAGE_NAME} quay.io/<your-username>/apache:latest
+          podman push "$IMAGE_NAME" quay.io/<your-username>/apache:latest
         '''
       }
     }
@@ -65,7 +65,7 @@ pipeline {
       steps {
         echo "[INFO] Kubernetes 배포 롤링 재시작"
         sh '''
-          kubectl rollout restart deployment apache -n ${NAMESPACE}
+          kubectl rollout restart deployment apache -n "$NAMESPACE"
         '''
       }
     }
