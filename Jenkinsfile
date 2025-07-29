@@ -5,6 +5,8 @@ pipeline {
     IMAGE_NAME = "hwijin12/apache:latest"
     NAMESPACE = "default"
     TMPDIR = "/var/jenkins_home/tmp"
+    RUNROOT = "/var/jenkins_home/.local/share/containers/run"
+    GRAPHROOT = "/var/jenkins_home/.local/share/containers/storage"
   }
 
   stages {
@@ -15,37 +17,36 @@ pipeline {
       }
     }
 
-stage('Build Image') {
-  steps {
-    echo "[INFO] Podman으로 이미지 빌드 시작"
-    sh '''
-      # 기존 DB 제거
-      rm -rf /var/jenkins_home/.local/share/containers/storage
-      rm -rf /var/jenkins_home/.local/share/containers/run
+    stage('Build Image') {
+      steps {
+        echo "[INFO] Podman으로 이미지 빌드 시작"
+        sh '''
+          # 캐시 초기화 (중요)
+          rm -rf $GRAPHROOT
+          rm -rf $RUNROOT
 
-      mkdir -p $TMPDIR
-      mkdir -p ~/.config/containers
+          mkdir -p $TMPDIR
+          mkdir -p ~/.config/containers
 
-      echo "[storage]" > ~/.config/containers/storage.conf
-      echo "driver = \\"vfs\\"" >> ~/.config/containers/storage.conf
-      echo "runroot = \\"/var/jenkins_home/.local/share/containers/run\\"" >> ~/.config/containers/storage.conf
-      echo "graphroot = \\"/var/jenkins_home/.local/share/containers/storage\\"" >> ~/.config/containers/storage.conf
+          echo "[storage]" > ~/.config/containers/storage.conf
+          echo "driver = \\"vfs\\"" >> ~/.config/containers/storage.conf
+          echo "runroot = \\"$RUNROOT\\"" >> ~/.config/containers/storage.conf
+          echo "graphroot = \\"$GRAPHROOT\\"" >> ~/.config/containers/storage.conf
 
-      echo "unqualified-search-registries = [\\"docker.io\\"]" > ~/.config/containers/registries.conf
+          echo "unqualified-search-registries = [\\"docker.io\\"]" > ~/.config/containers/registries.conf
 
-      TMPDIR=$TMPDIR \
-      XDG_RUNTIME_DIR=$TMPDIR \
-      PODMAN_TMPDIR=$TMPDIR \
-      podman \
-        --tmpdir=$TMPDIR \
-        --root=/var/jenkins_home/.local/share/containers/storage \
-        --runroot=/var/jenkins_home/.local/share/containers/run \
-        --storage-driver=vfs \
-        build -t ${IMAGE_NAME} -f Dockerfile .
-    '''
-  }
-}
-
+          TMPDIR=$TMPDIR \
+          XDG_RUNTIME_DIR=$TMPDIR \
+          PODMAN_TMPDIR=$TMPDIR \
+          podman \
+            --tmpdir=$TMPDIR \
+            --root=$GRAPHROOT \
+            --runroot=$RUNROOT \
+            --storage-driver=vfs \
+            build -t ${IMAGE_NAME} -f Dockerfile .
+        '''
+      }
+    }
 
     stage('Push Image (옵션)') {
       when {
