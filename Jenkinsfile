@@ -15,11 +15,14 @@ pipeline {
       }
     }
 
-
 stage('Build Image') {
   steps {
     echo "[INFO] Podman으로 이미지 빌드 시작"
     sh '''
+      # 기존 DB 제거
+      rm -rf /var/jenkins_home/.local/share/containers/storage
+      rm -rf /var/jenkins_home/.local/share/containers/run
+
       mkdir -p $TMPDIR
       mkdir -p ~/.config/containers
 
@@ -42,6 +45,7 @@ stage('Build Image') {
     '''
   }
 }
+
 
     stage('Push Image (옵션)') {
       when {
