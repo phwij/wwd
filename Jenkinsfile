@@ -15,27 +15,33 @@ pipeline {
       }
     }
 
-    stage('Build Image') {
-      steps {
-        echo "[INFO] Podman으로 이미지 빌드 시작"
-        sh '''
-          mkdir -p $TMPDIR
-          mkdir -p ~/.config/containers
 
-          echo "[storage]" > ~/.config/containers/storage.conf
-          echo "driver = \\"vfs\\"" >> ~/.config/containers/storage.conf
-          echo "runroot = \\"/var/jenkins_home/.local/share/containers/run\\"" >> ~/.config/containers/storage.conf
-          echo "graphroot = \\"/var/jenkins_home/.local/share/containers/storage\\"" >> ~/.config/containers/storage.conf
+stage('Build Image') {
+  steps {
+    echo "[INFO] Podman으로 이미지 빌드 시작"
+    sh '''
+      mkdir -p $TMPDIR
+      mkdir -p ~/.config/containers
 
-          echo "unqualified-search-registries = [\\"docker.io\\"]" > ~/.config/containers/registries.conf
+      echo "[storage]" > ~/.config/containers/storage.conf
+      echo "driver = \\"vfs\\"" >> ~/.config/containers/storage.conf
+      echo "runroot = \\"/var/jenkins_home/.local/share/containers/run\\"" >> ~/.config/containers/storage.conf
+      echo "graphroot = \\"/var/jenkins_home/.local/share/containers/storage\\"" >> ~/.config/containers/storage.conf
 
-          TMPDIR=$TMPDIR \
-          XDG_RUNTIME_DIR=$TMPDIR \
-          PODMAN_TMPDIR=$TMPDIR \
-          podman --tmpdir=$TMPDIR --storage-driver=vfs build -t ${IMAGE_NAME} -f Dockerfile .
-        '''
-      }
-    }
+      echo "unqualified-search-registries = [\\"docker.io\\"]" > ~/.config/containers/registries.conf
+
+      TMPDIR=$TMPDIR \
+      XDG_RUNTIME_DIR=$TMPDIR \
+      PODMAN_TMPDIR=$TMPDIR \
+      podman \
+        --tmpdir=$TMPDIR \
+        --root=/var/jenkins_home/.local/share/containers/storage \
+        --runroot=/var/jenkins_home/.local/share/containers/run \
+        --storage-driver=vfs \
+        build -t ${IMAGE_NAME} -f Dockerfile .
+    '''
+  }
+}
 
     stage('Push Image (옵션)') {
       when {
