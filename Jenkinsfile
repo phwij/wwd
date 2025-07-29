@@ -20,6 +20,7 @@ pipeline {
         sh '''
           mkdir -p ~/.config/containers
 
+      # storage.conf 설정 (runroot, graphroot 지정)
           cat <<EOF > ~/.config/containers/storage.conf
 [storage]
 driver = "vfs"
@@ -29,12 +30,16 @@ runroot = "/var/jenkins_home/.local/share/containers/run"
 graphroot = "/var/jenkins_home/.local/share/containers/storage"
 EOF
 
-          echo -e '[registries.search]\\nregistries = ["docker.io"]' > ~/.config/containers/registries.conf
+      # registries.conf 설정 (TOML 형식)
+          cat <<EOF > ~/.config/containers/registries.conf
+unqualified-search-registries = ["docker.io"]
+EOF
 
-          podman build -t ${IMAGE_NAME} -f Dockerfile .
-        '''
-      }
-    }
+      # 이미지 빌드
+         podman build -t ${IMAGE_NAME} -f Dockerfile .
+       '''
+     }
+   }
 
     stage('Push Image (옵션)') {
       when {
