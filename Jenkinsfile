@@ -4,7 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = "hwijin12/apache"
         IMAGE_TAG = "latest"
-        HOME = "/var/jenkins_home"  // Jenkins 기본 홈 디렉토리
+        BASE_DIR = "/custom-podman"
     }
 
     stages {
@@ -20,39 +20,44 @@ pipeline {
                 echo "[INFO] Podman으로 이미지 빌드 시작"
                 sh '''
                     # 디렉토리 생성
-                    mkdir -p $HOME/.config/containers
-                    mkdir -p $HOME/tmp
-                    mkdir -p $HOME/.local/share/containers/run
-                    mkdir -p $HOME/.local/share/containers/storage
+                    mkdir -p $BASE_DIR/tmp
+                    mkdir -p $BASE_DIR/run
+                    mkdir -p $BASE_DIR/storage
+                    mkdir -p $BASE_DIR/config
+                    mkdir -p $BASE_DIR/containers
+                    mkdir -p $BASE_DIR/containers/cache
 
-                    # registries.conf 구성
-                    cat <<EOF > $HOME/.config/containers/registries.conf
+                    # Podman이 /var/tmp를 참조하지 않도록 환경 변수로 override
+                    export TMPDIR=$BASE_DIR/tmp
+                    export XDG_RUNTIME_DIR=$BASE_DIR/tmp
+                    export PODMAN_TMPDIR=$BASE_DIR/tmp
+
+                    # OCI config 등 fallback 경로용
+                    export _OCI_TMPDIR=$BASE_DIR/tmp
+
+                    # registries.conf
+                    cat <<EOF > $BASE_DIR/config/registries.conf
 unqualified-search-registries = ["docker.io"]
 
 [storage]
 driver = "vfs"
-runroot = "$HOME/.local/share/containers/run"
-graphroot = "$HOME/.local/share/containers/storage"
+runroot = "$BASE_DIR/run"
+graphroot = "$BASE_DIR/storage"
 
 [engine]
-tmpdir = "$HOME/tmp"
-runroot = "$HOME/.local/share/containers/run"
+tmpdir = "$BASE_DIR/tmp"
+runroot = "$BASE_DIR/run"
 
 [[registry]]
 prefix = "docker.io"
 location = "registry-1.docker.io"
 EOF
 
-                    # 환경변수 설정
-                    export XDG_RUNTIME_DIR=$HOME/tmp
-                    export TMPDIR=$HOME/tmp
-                    export PODMAN_TMPDIR=$HOME/tmp
-
-                    # podman 빌드 실행
+                    # 이미지 빌드
                     podman --storage-driver=vfs \
-                           --root=$HOME/.local/share/containers/storage \
-                           --runroot=$HOME/.local/share/containers/run \
-                           --tmpdir=$HOME/tmp \
+                           --root=$BASE_DIR/storage \
+                           --runroot=$BASE_DIR/run \
+                           --tmpdir=$BASE_DIR/tmp \
                            build -t $IMAGE_NAME:$IMAGE_TAG -f Dockerfile .
                 '''
             }
