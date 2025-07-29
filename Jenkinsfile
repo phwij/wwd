@@ -7,6 +7,7 @@ pipeline {
     TMPDIR = "/var/jenkins_home/tmp"
     RUNROOT = "/var/jenkins_home/.local/share/containers/run"
     GRAPHROOT = "/var/jenkins_home/.local/share/containers/storage"
+    CONFDIR = "/var/jenkins_home/.config/containers"
   }
 
   stages {
@@ -21,29 +22,24 @@ pipeline {
       steps {
         echo "[INFO] Podman으로 이미지 빌드 시작"
         sh '''
-          echo "[INIT] Podman 캐시 초기화"
-          rm -rf "$RUNROOT" "$GRAPHROOT"
+          mkdir -p "$TMPDIR" "$RUNROOT" "$GRAPHROOT" "$CONFDIR"
 
-          mkdir -p "$TMPDIR"
-          mkdir -p ~/.config/containers
+          echo "[storage]" > $CONFDIR/storage.conf
+          echo "driver = \\"vfs\\"" >> $CONFDIR/storage.conf
+          echo "runroot = \\"$RUNROOT\\"" >> $CONFDIR/storage.conf
+          echo "graphroot = \\"$GRAPHROOT\\"" >> $CONFDIR/storage.conf
 
-          echo "[storage]" > ~/.config/containers/storage.conf
-          echo "driver = \\"vfs\\"" >> ~/.config/containers/storage.conf
-          echo "runroot = \\"$RUNROOT\\"" >> ~/.config/containers/storage.conf
-          echo "graphroot = \\"$GRAPHROOT\\"" >> ~/.config/containers/storage.conf
+          echo "[engine]" > $CONFDIR/containers.conf
+          echo "tmpdir = \\"$TMPDIR\\"" >> $CONFDIR/containers.conf
+          echo "runroot = \\"$RUNROOT\\"" >> $CONFDIR/containers.conf
 
-          echo "unqualified-search-registries = [\\"docker.io\\"]" > ~/.config/containers/registries.conf
+          echo "[[registry]]" > $CONFDIR/registries.conf
+          echo "prefix = \\"docker.io\\"" >> $CONFDIR/registries.conf
 
-          echo "[BUILD] podman build 시작"
           TMPDIR="$TMPDIR" \
           XDG_RUNTIME_DIR="$TMPDIR" \
           PODMAN_TMPDIR="$TMPDIR" \
-          podman \
-            --tmpdir="$TMPDIR" \
-            --root="$GRAPHROOT" \
-            --runroot="$RUNROOT" \
-            --storage-driver=vfs \
-            build -t "$IMAGE_NAME" -f Dockerfile .
+          podman --storage-driver=vfs build -t "$IMAGE_NAME" -f Dockerfile .
         '''
       }
     }
