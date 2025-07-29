@@ -1,0 +1,131 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    cni.projectcalico.org/containerID: 7fd8404a4b0d69ff07afdef6219125644fe0041f86d114b46ecd8d552874caab
+    cni.projectcalico.org/podIP: 10.233.105.141/32
+    cni.projectcalico.org/podIPs: 10.233.105.141/32
+  creationTimestamp: "2025-07-11T02:24:45Z"
+  generateName: apache-deployment-5448bf96dc-
+  labels:
+    app: apache
+    pod-template-hash: 5448bf96dc
+  name: apache
+  namespace: testnode
+  ownerReferences:
+  - apiVersion: apps/v1
+    blockOwnerDeletion: true
+    controller: true
+    kind: ReplicaSet
+    name: apache-deployment-5448bf96dc
+    uid: fcc16067-2e16-4946-a93e-31150aed654a
+  resourceVersion: "23159"
+  uid: 2b7924f3-0539-427f-9e02-472d6fab4f58
+spec:
+  containers:
+  - image: docker.io/hwijin12/dokc:web2
+    imagePullPolicy: IfNotPresent
+    name: apache
+    ports:
+    - containerPort: 80
+      protocol: TCP
+    resources: {}
+    terminationMessagePath: /dev/termination-log
+    terminationMessagePolicy: File
+    volumeMounts:
+    - mountPath: /usr/local/apache2/htdocs/
+      name: html-volume
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-fwqmm
+      readOnly: true
+  dnsPolicy: ClusterFirst
+  enableServiceLinks: true
+  nodeName: instance4
+  preemptionPolicy: PreemptLowerPriority
+  priority: 0
+  restartPolicy: Always
+  schedulerName: default-scheduler
+  securityContext: {}
+  serviceAccount: default
+  serviceAccountName: default
+  terminationGracePeriodSeconds: 30
+  tolerations:
+  - effect: NoExecute
+    key: node.kubernetes.io/not-ready
+    operator: Exists
+    tolerationSeconds: 300
+  - effect: NoExecute
+    key: node.kubernetes.io/unreachable
+    operator: Exists
+    tolerationSeconds: 300
+  volumes:
+  - emptyDir: {}
+    name: html-volume
+  - name: kube-api-access-fwqmm
+    projected:
+      defaultMode: 420
+      sources:
+      - serviceAccountToken:
+          expirationSeconds: 3607
+          path: token
+      - configMap:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          name: kube-root-ca.crt
+      - downwardAPI:
+          items:
+          - fieldRef:
+              apiVersion: v1
+              fieldPath: metadata.namespace
+            path: namespace
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: "2025-07-11T02:24:47Z"
+    status: "True"
+    type: PodReadyToStartContainers
+  - lastProbeTime: null
+    lastTransitionTime: "2025-07-11T02:24:45Z"
+    status: "True"
+    type: Initialized
+  - lastProbeTime: null
+    lastTransitionTime: "2025-07-11T02:24:47Z"
+    status: "True"
+    type: Ready
+  - lastProbeTime: null
+    lastTransitionTime: "2025-07-11T02:24:47Z"
+    status: "True"
+    type: ContainersReady
+  - lastProbeTime: null
+    lastTransitionTime: "2025-07-11T02:24:45Z"
+    status: "True"
+    type: PodScheduled
+  containerStatuses:
+  - containerID: containerd://34c19b8a93951ae9a2399080b2200d3831259ebfd7c28dc6d7a7d24b7067647c
+    image: localhost/web
+    imageID: 92c46922177f
+    lastState: {}
+    name: apache
+    ready: true
+    restartCount: 0
+    started: true
+    state:
+      running:
+        startedAt: "2025-07-11T02:24:46Z"
+    volumeMounts:
+    - mountPath: /usr/local/apache2/htdocs/
+      name: html-volume
+    - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+      name: kube-api-access-fwqmm
+      readOnly: true
+      recursiveReadOnly: Disabled
+  hostIP: 10.178.0.28
+  hostIPs:
+  - ip: 10.178.0.28
+  phase: Running
+  podIP: 10.233.105.141
+  podIPs:
+  - ip: 10.233.105.141
+  qosClass: BestEffort
+  startTime: "2025-07-11T02:24:45Z"
