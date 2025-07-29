@@ -29,7 +29,10 @@ pipeline {
 
           echo "unqualified-search-registries = [\\"docker.io\\"]" > ~/.config/containers/registries.conf
 
-          TMPDIR=$TMPDIR podman --storage-driver=vfs build -t ${IMAGE_NAME} -f Dockerfile .
+          TMPDIR=$TMPDIR \
+          XDG_RUNTIME_DIR=$TMPDIR \
+          PODMAN_TMPDIR=$TMPDIR \
+          podman --storage-driver=vfs build -t ${IMAGE_NAME} -f Dockerfile .
         '''
       }
     }
