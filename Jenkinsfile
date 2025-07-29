@@ -4,7 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = "hwijin12/apache"
         IMAGE_TAG = "latest"
-        BASE_DIR = "${env.WORKSPACE}/.podman"  // Jenkins 작업 디렉토리 내 podman 공간
+        HOME = "/var/jenkins_home"  // Jenkins 기본 홈 디렉토리
     }
 
     stages {
@@ -19,29 +19,40 @@ pipeline {
             steps {
                 echo "[INFO] Podman으로 이미지 빌드 시작"
                 sh '''
-                    mkdir -p $BASE_DIR/tmp $BASE_DIR/run $BASE_DIR/storage $BASE_DIR/config
+                    # 디렉토리 생성
+                    mkdir -p $HOME/.config/containers
+                    mkdir -p $HOME/tmp
+                    mkdir -p $HOME/.local/share/containers/run
+                    mkdir -p $HOME/.local/share/containers/storage
 
-                    echo 'unqualified-search-registries = ["docker.io"]' > $BASE_DIR/config/registries.conf
-                    echo '[storage]' >> $BASE_DIR/config/registries.conf
-                    echo 'driver = "vfs"' >> $BASE_DIR/config/registries.conf
-                    echo "runroot = \\"$BASE_DIR/run\\"" >> $BASE_DIR/config/registries.conf
-                    echo "graphroot = \\"$BASE_DIR/storage\\"" >> $BASE_DIR/config/registries.conf
-                    echo '[engine]' >> $BASE_DIR/config/registries.conf
-                    echo "tmpdir = \\"$BASE_DIR/tmp\\"" >> $BASE_DIR/config/registries.conf
-                    echo "runroot = \\"$BASE_DIR/run\\"" >> $BASE_DIR/config/registries.conf
-                    echo '[[registry]]' >> $BASE_DIR/config/registries.conf
-                    echo 'prefix = "docker.io"' >> $BASE_DIR/config/registries.conf
-                    echo 'location = "registry-1.docker.io"' >> $BASE_DIR/config/registries.conf
+                    # registries.conf 구성
+                    cat <<EOF > $HOME/.config/containers/registries.conf
+unqualified-search-registries = ["docker.io"]
 
-                    export XDG_RUNTIME_DIR=$BASE_DIR/tmp
-                    export TMPDIR=$BASE_DIR/tmp
-                    export PODMAN_TMPDIR=$BASE_DIR/tmp
+[storage]
+driver = "vfs"
+runroot = "$HOME/.local/share/containers/run"
+graphroot = "$HOME/.local/share/containers/storage"
 
+[engine]
+tmpdir = "$HOME/tmp"
+runroot = "$HOME/.local/share/containers/run"
+
+[[registry]]
+prefix = "docker.io"
+location = "registry-1.docker.io"
+EOF
+
+                    # 환경변수 설정
+                    export XDG_RUNTIME_DIR=$HOME/tmp
+                    export TMPDIR=$HOME/tmp
+                    export PODMAN_TMPDIR=$HOME/tmp
+
+                    # podman 빌드 실행
                     podman --storage-driver=vfs \
-                           --root=$BASE_DIR/storage \
-                           --runroot=$BASE_DIR/run \
-                           --tmpdir=$BASE_DIR/tmp \
-                           --config=$BASE_DIR/config \
+                           --root=$HOME/.local/share/containers/storage \
+                           --runroot=$HOME/.local/share/containers/run \
+                           --tmpdir=$HOME/tmp \
                            build -t $IMAGE_NAME:$IMAGE_TAG -f Dockerfile .
                 '''
             }
