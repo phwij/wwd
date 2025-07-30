@@ -3,40 +3,31 @@ pipeline {
 
     environment {
         IMAGE_NAME = "hwijin12/apache"
-        IMAGE_TAG = "latest"
-        BASE_DIR = "/custom-podman"
+        IMAGE_TAG = "${new Date().format('yyyyMMdd-HHmmss')}"
+        BASE_DIR   = "/custom-podman"
     }
 
     stages {
         stage('Checkout Source') {
             steps {
-                echo "[INFO] GitHub 코드 체크아웃"
+                echo "[INFO] Git 소스 체크아웃"
                 checkout scm
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo "[INFO] Podman으로 이미지 빌드 시작"
+                echo "[INFO] Podman 이미지 빌드 시작"
                 sh '''
-                    # 디렉토리 생성
-                    mkdir -p $BASE_DIR/tmp
-                    mkdir -p $BASE_DIR/run
-                    mkdir -p $BASE_DIR/storage
-                    mkdir -p $BASE_DIR/config
-                    mkdir -p $BASE_DIR/containers
-                    mkdir -p $BASE_DIR/containers/cache
+                    echo "[INFO] Podman 빌드 환경 준비"
+                    mkdir -p $BASE_DIR/tmp $BASE_DIR/run $BASE_DIR/storage $BASE_DIR/config $BASE_DIR/containers/cache
 
-                    # Podman이 /var/tmp를 참조하지 않도록 환경 변수로 override
-                    export TMPDIR=/custom-podman/tmp
-                    export PODMAN_TMPDIR=/custom-podman/tmp
-                    export XDG_RUNTIME_DIR=/custom-podman/tmp
-
-
-                    # OCI config 등 fallback 경로용
+                    export TMPDIR=$BASE_DIR/tmp
+                    export PODMAN_TMPDIR=$BASE_DIR/tmp
+                    export XDG_RUNTIME_DIR=$BASE_DIR/tmp
                     export _OCI_TMPDIR=$BASE_DIR/tmp
 
-                    # registries.conf
+                    # Podman registries.conf 설정
                     cat <<EOF > $BASE_DIR/config/registries.conf
 unqualified-search-registries = ["docker.io"]
 
@@ -54,7 +45,7 @@ prefix = "docker.io"
 location = "registry-1.docker.io"
 EOF
 
-                    # 이미지 빌드
+                    echo "[INFO] Podman 이미지 빌드 실행"
                     podman --storage-driver=vfs \
                            --root=$BASE_DIR/storage \
                            --runroot=$BASE_DIR/run \
@@ -64,12 +55,13 @@ EOF
             }
         }
 
-        stage('Push Image') {
+        stage('Push Docker Image') {
             steps {
-                echo "[INFO] DockerHub로 이미지 푸시"
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', passwordVariable: 'DOCKERHUB_PASS', usernameVariable: 'DOCKERHUB_USER')]) {
+                echo "[INFO] DockerHub로 이미지 Push"
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred', usernameVariable: 'DOCKERHUB_USER', passwordVariable: 'DOCKERHUB_PASS')]) {
                     sh '''
                         echo $DOCKERHUB_PASS | podman login --username $DOCKERHUB_USER --password-stdin docker.io
+
                         podman push $IMAGE_NAME:$IMAGE_TAG
                     '''
                 }
@@ -78,9 +70,10 @@ EOF
 
         stage('Trigger Rolling Update') {
             steps {
-                echo "[INFO] Apache StatefulSet 롤링 업데이트 트리거"
+                echo "[INFO] Kubernetes 롤링 업데이트 수행"
                 sh '''
-                    kubectl set image statefulset/apache apache=$IMAGE_NAME:$IMAGE_TAG --record
+                    kubectl set image statefulset/apache apache=$IMAGE_NAME:$IMAGE_TAG -n default --record
+                    kubectl rollout status statefulset/apache -n default
                 '''
             }
         }
