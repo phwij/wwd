@@ -1,1 +1,1 @@
-jenkins_ci
+jenkins_webhook
