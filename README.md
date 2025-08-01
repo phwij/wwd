@@ -1,1 +1,1 @@
-jenkins_webhook
+jenkins_github
