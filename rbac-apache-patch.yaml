@@ -1,0 +1,25 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: jenkins-deployment-editor
+  namespace: default
+rules:
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    verbs: ["get", "list", "watch", "update", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: jenkins-deployment-editor-binding
+  namespace: default
+subjects:
+  - kind: ServiceAccount
+    name: default               # Jenkins Pod가 사용하는 계정
+    namespace: jenkins          # Jenkins가 있는 네임스페이스!
+roleRef:
+  kind: Role
+  name: jenkins-deployment-editor
+  apiGroup: rbac.authorization.k8s.io
+
