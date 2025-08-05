@@ -80,3 +80,23 @@ li{
   flex-direction: column;
 }
 
+.thumbnail {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.thumbnail .caption {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.thumbnail .caption dl {
+  flex: 1 1 auto;
+}
+
+.thumbnail .caption p {
+  margin-top: auto; /* 버튼을 맨 아래로 밀어내기 */
+}
+
